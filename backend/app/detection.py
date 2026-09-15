@@ -6,13 +6,15 @@ Pothole detection combines two signals:
    on its own. This is a legitimate, precedented baseline technique
    (pre-dating deep-learning pothole detectors).
 2. A trained MobileNetV2 classifier (none/minor/moderate/severe severity,
-   fine-tuned on ~300 labeled road-damage photos) predicts overall
+   fine-tuned on ~900 labeled road-damage photos) predicts overall
    severity directly from the photo, replacing the old count/coverage
    threshold rule for the "severity" label `classify_severity()` remains
-   available/tested below as the fallback rule it's based on. The model
-   reached 67.8% held-out validation accuracy - noticeably lower than
-   FireWatch/SmartWaste's models, a direct consequence of the much
-   smaller (297-image) and class-imbalanced training set. See README
+   available/tested below as the fallback rule it's based on. Retrained
+   with a ~3x larger dataset (CC0 road-issue photos added to the original
+   297), the model reached 76.0% held-out validation accuracy, up from
+   67.8% - a real improvement, still the weakest of this portfolio's
+   trained models because the "none" (clean road) class still only has 40
+   training images (no larger clean-road source was found). See README
    "Limitations".
 """
 import os

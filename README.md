@@ -119,12 +119,15 @@ redaction policy before publishing raw photos externally.
   patches that aren't actually potholes; confidence scores are capped well below 1.0 to
   reflect this.
 - **The "severity" label comes from a trained MobileNetV2 classifier** (frozen ImageNet
-  backbone + trained classifier head), fine-tuned on ~300 labeled road-damage photos
-  (none/minor/moderate/severe). It reached **67.8% held-out validation accuracy** — real,
-  but noticeably weaker than the other trained models in this portfolio (SmartWaste AI:
-  83.8%, FireWatch AI: 94.8%), a direct consequence of the much smaller and class-imbalanced
-  training set (40-105 images per class). Treat severity labels as indicative, not
-  authoritative, until the model is retrained on more/better-balanced data.
+  backbone + trained classifier head), fine-tuned on ~900 labeled road-damage photos
+  (none/minor/moderate/severe) — the original 297-image set plus a CC0-licensed
+  road-issues dataset added to the moderate/severe classes. It reached **76.0% held-out
+  validation accuracy**, up from 67.8% on the smaller dataset — a real, retrain-verified
+  improvement, though still the weakest of this portfolio's trained models. The **"none"
+  (clean road) class still has only 40 training images** — no larger source of
+  labeled clean-road photos was found — so the class imbalance (40 vs. 355-396 for
+  moderate/severe) hasn't fully resolved, and the model may be biased toward predicting
+  damage even on a clean road. Treat severity labels as indicative, not authoritative.
 - **Count and severity can disagree** — because they come from two independent signals,
   a real photo can show `pothole_count: 0` (the contour detector found no dark blob
   matching its shape filter) alongside a non-"none" severity (the trained model still
