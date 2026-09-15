@@ -1,14 +1,41 @@
 """
-Pothole detection via classical computer vision (no trained model): adaptive
-thresholding + contour analysis to find dark, irregular blobs against the
-road surface, filtered by area and shape. This is a legitimate, precedented
-baseline technique (pre-dating deep-learning pothole detectors) - it is not
-as accurate as a trained model. See README "Limitations".
+Pothole detection combines two signals:
+1. Classical CV (adaptive thresholding + contour analysis) finds dark,
+   irregular blobs against the road surface - gives a pothole count and
+   coverage percentage that a single-label image classifier can't produce
+   on its own. This is a legitimate, precedented baseline technique
+   (pre-dating deep-learning pothole detectors).
+2. A trained MobileNetV2 classifier (none/minor/moderate/severe severity,
+   fine-tuned on ~300 labeled road-damage photos) predicts overall
+   severity directly from the photo, replacing the old count/coverage
+   threshold rule for the "severity" label `classify_severity()` remains
+   available/tested below as the fallback rule it's based on. The model
+   reached 67.8% held-out validation accuracy - noticeably lower than
+   FireWatch/SmartWaste's models, a direct consequence of the much
+   smaller (297-image) and class-imbalanced training set. See README
+   "Limitations".
 """
+import os
 from typing import Tuple
 
 import cv2
 import numpy as np
+import torch
+from PIL import Image
+from torchvision import transforms
+
+_MODEL_PATH = os.path.join(os.path.dirname(__file__), "ml_model", "potholewatch_classifier.pt")
+_MODEL_CLASSES = ["minor", "moderate", "none", "severe"]
+_TRANSFORM = transforms.Compose(
+    [
+        transforms.Resize((224, 224)),
+        transforms.ToTensor(),
+        transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
+    ]
+)
+
+_model = torch.jit.load(_MODEL_PATH, map_location="cpu")
+_model.eval()
 
 
 def detect_potholes(frame: np.ndarray, min_area_fraction: float = 0.0015) -> Tuple[int, float, float]:
@@ -61,9 +88,18 @@ def classify_severity(count: int, coverage_pct: float) -> str:
     return "severe"
 
 
+def _predict_severity(frame: np.ndarray) -> str:
+    rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+    tensor = _TRANSFORM(Image.fromarray(rgb)).unsqueeze(0)
+    with torch.no_grad():
+        probs = torch.softmax(_model(tensor), dim=1)[0]
+    idx = int(torch.argmax(probs))
+    return _MODEL_CLASSES[idx]
+
+
 def analyze_image(frame: np.ndarray) -> dict:
     count, coverage_pct, confidence = detect_potholes(frame)
-    severity = classify_severity(count, coverage_pct)
+    severity = _predict_severity(frame)
     return {
         "pothole_count": count,
         "coverage_pct": coverage_pct,

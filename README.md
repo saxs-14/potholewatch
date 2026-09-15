@@ -28,20 +28,22 @@ time.
 ```text
 frontend (React/Vite/TS/Tailwind)  ->  backend (FastAPI)  ->  SQLite
                                               |
-                                     classical CV: adaptive threshold +
-                                     contour analysis (no trained model)
+                            classical CV (count/coverage) + trained MobileNetV2
+                                  severity classifier (none/minor/moderate/severe)
 ```
 
 ## Technology stack
 
-Python, FastAPI, SQLAlchemy, SQLite, OpenCV; React, TypeScript, Vite, Tailwind CSS.
+Python, FastAPI, SQLAlchemy, SQLite, OpenCV, PyTorch/TorchVision; React, TypeScript, Vite,
+Tailwind CSS.
 
 ## Folder structure
 
 ```text
 potholewatch/
 ├── backend/
-│   ├── app/         # FastAPI app, detection pipeline
+│   ├── app/
+│   │   └── ml_model/  # Trained TorchScript classifier (potholewatch_classifier.pt)
 │   ├── demo/          # Bundled sample road-damage photos
 │   └── tests/
 ├── frontend/
@@ -111,12 +113,18 @@ redaction policy before publishing raw photos externally.
 
 ## Limitations
 
-- **Detection is classical image analysis (adaptive thresholding + contour shape
-  filtering), not a trained pothole-detection model.** It will misfire on shadows, drain
-  covers, oil stains, and other dark irregular patches that aren't actually potholes —
-  confidence scores are capped well below 1.0 to reflect this. A production system should
-  train a model (e.g. YOLO) on a labeled pothole dataset for the target road surfaces.
-- Severity thresholds are heuristic defaults, not calibrated against real repair-cost data.
+- **Pothole count and coverage % still come from classical image analysis** (adaptive
+  thresholding + contour shape filtering) — a model can't produce a blob count on its own.
+  This will still misfire on shadows, drain covers, oil stains, and other dark irregular
+  patches that aren't actually potholes; confidence scores are capped well below 1.0 to
+  reflect this.
+- **The "severity" label comes from a trained MobileNetV2 classifier** (frozen ImageNet
+  backbone + trained classifier head), fine-tuned on ~300 labeled road-damage photos
+  (none/minor/moderate/severe). It reached **67.8% held-out validation accuracy** — real,
+  but noticeably weaker than the other trained models in this portfolio (SmartWaste AI:
+  83.8%, FireWatch AI: 94.8%), a direct consequence of the much smaller and class-imbalanced
+  training set (40-105 images per class). Treat severity labels as indicative, not
+  authoritative, until the model is retrained on more/better-balanced data.
 - Single-image analysis only — no cross-photo deduplication of the same physical pothole.
 
 ## Business model
