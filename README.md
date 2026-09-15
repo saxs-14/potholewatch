@@ -125,6 +125,12 @@ redaction policy before publishing raw photos externally.
   83.8%, FireWatch AI: 94.8%), a direct consequence of the much smaller and class-imbalanced
   training set (40-105 images per class). Treat severity labels as indicative, not
   authoritative, until the model is retrained on more/better-balanced data.
+- **Count and severity can disagree** — because they come from two independent signals,
+  a real photo can show `pothole_count: 0` (the contour detector found no dark blob
+  matching its shape filter) alongside a non-"none" severity (the trained model still
+  recognised road damage from the whole photo). This is observed, expected behaviour, not
+  a bug — the model can catch damage the classical blob detector misses — but it can look
+  inconsistent in the UI and is worth surfacing to users rather than silently reconciled.
 - Single-image analysis only — no cross-photo deduplication of the same physical pothole.
 
 ## Business model
