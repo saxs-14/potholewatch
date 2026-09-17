@@ -1,5 +1,6 @@
 import { useEffect, useState, useCallback } from "react";
 import { Link } from "react-router-dom";
+import { Helmet } from "react-helmet-async";
 import { api, DashboardSummary, Report } from "../lib/api";
 import KpiCard from "../components/KpiCard";
 
@@ -65,6 +66,11 @@ export default function Dashboard() {
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100">
+      <Helmet>
+        <title>Dashboard — PotholeWatch</title>
+        <meta name="robots" content="noindex, nofollow" />
+      </Helmet>
+
       <header className="flex items-center justify-between px-6 py-4 border-b border-slate-800">
         <Link to="/" className="flex items-center gap-2 font-semibold">
           <span className="inline-block h-2.5 w-2.5 rounded-full bg-orange-500" />
@@ -77,6 +83,7 @@ export default function Dashboard() {
       </header>
 
       <main className="max-w-6xl mx-auto px-6 py-8 space-y-8">
+        <h1 className="sr-only">PotholeWatch road damage dashboard</h1>
         {!apiOnline && apiOnline !== null && (
           <div className="rounded-lg border border-red-500/40 bg-red-500/10 p-4 text-sm">
             Can't reach the backend at <code>/api</code>. Start it with <code>uvicorn app.main:app --reload</code>.
@@ -134,6 +141,7 @@ export default function Dashboard() {
           {reports.length === 0 ? (
             <p className="text-sm text-slate-500">No reports yet — run the demo or upload a photo above.</p>
           ) : (
+            <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
                 <tr className="text-left text-slate-500 border-b border-slate-800">
@@ -158,6 +166,7 @@ export default function Dashboard() {
                 ))}
               </tbody>
             </table>
+            </div>
           )}
         </section>
       </main>
