@@ -17,8 +17,9 @@ from sqlalchemy.orm import Session
 from app.config import settings
 from app.database import get_db
 from app.detection import analyze_image
-from app.models import PotholeReport, ReportStatusHistory, WorkOrder
+from app.models import PotholeReport, ReportStatusHistory, WorkOrder, ReportOwner, User
 from app.schemas import DashboardSummary, ReportOut, StatusHistoryOut, StatusUpdate, WorkOrderCreate, WorkOrderOut
+from app.auth import require_user, require_roles
 
 router = APIRouter(prefix="/api", tags=["reports"])
 DEMO_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "demo"))
