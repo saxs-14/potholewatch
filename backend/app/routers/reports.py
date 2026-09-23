@@ -114,15 +114,20 @@ def analyze_demo(db: Session = Depends(get_db), owner: Optional[User] = Depends(
 
 
 @router.get("/reports", response_model=List[ReportOut])
-def list_reports(limit: int = 200, db: Session = Depends(get_db)):
+def list_reports(limit: int = 200, db: Session = Depends(get_db), owner: Optional[User] = Depends(require_user)):
     limit = min(max(limit, 1), 500)
-    return db.query(PotholeReport).order_by(PotholeReport.created_at.desc()).limit(limit).all()
+    query = db.query(PotholeReport)
+    if owner is not None and owner.role == "citizen":
+        query = query.join(ReportOwner, ReportOwner.report_id == PotholeReport.id).filter(ReportOwner.user_id == owner.id)
+    return query.order_by(PotholeReport.created_at.desc()).limit(limit).all()
 
 
 @router.get("/reports/{report_id}", response_model=ReportOut)
-def get_report(report_id: int, db: Session = Depends(get_db)):
+def get_report(report_id: int, db: Session = Depends(get_db), owner: Optional[User] = Depends(require_user)):
     report = db.get(PotholeReport, report_id)
     if report is None:
+        raise HTTPException(status_code=404, detail="Report not found")
+    if owner is not None and owner.role == "citizen" and db.query(ReportOwner).filter_by(report_id=report_id, user_id=owner.id).first() is None:
         raise HTTPException(status_code=404, detail="Report not found")
     return report
 
