@@ -43,7 +43,7 @@ npm run build
 npm run dev
 ```
 
-The frontend no longer contains a hard-coded API key. Set VITE_API_KEY to the development/deployment credential supplied to the backend. Do not treat a browser-exposed API key as a user secret.
+The frontend no longer contains a hard-coded API key. Local/operator deployments may set VITE_API_KEY, but normal users can register and sign in through /login. Bearer access tokens are signed server-side using the deployment secret. Do not treat a browser-exposed API key as a user secret.
 
 ## API
 
@@ -61,7 +61,7 @@ The frontend no longer contains a hard-coded API key. Set VITE_API_KEY to the de
 
 The current application is a working foundation, but it is not yet a municipal production deployment. The remaining major work is deliberately separated into independent phases:
 
-1. **Identity:** replace the single deployment API key with per-user authentication and role-based authorization.
+1. **Identity:** user registration/login and bearer authentication are now present; next add role enforcement and report ownership.
 2. **Database:** add migrations and move hosted deployments from SQLite to PostgreSQL.
 3. **Maps:** add an interactive OpenStreetMap/Leaflet map, marker clustering and hotspot views.
 4. **AI detection:** replace the classical contour count with a properly evaluated object-detection model that returns per-pothole bounding boxes and confidence.

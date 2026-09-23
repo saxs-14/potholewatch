@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { Helmet } from "react-helmet-async";
 import { api, DashboardSummary, Report } from "../lib/api";
 import KpiCard from "../components/KpiCard";
@@ -16,9 +16,10 @@ export default function Dashboard() {
   const [online,setOnline]=useState<boolean|null>(null);
   const [loading,setLoading]=useState(false);
   const [error,setError]=useState<string|null>(null);
+  const navigate=useNavigate();
 
   const refresh=useCallback(async()=>{try{const [s,r]=await Promise.all([api.summary(),api.reports()]);setSummary(s);setReports(r);setOnline(true);}catch{setOnline(false);}},[]);
-  useEffect(()=>{api.health().then(()=>setOnline(true)).catch(()=>setOnline(false));refresh();},[refresh]);
+  useEffect(()=>{if(!localStorage.getItem("potholewatch_token") && !import.meta.env.VITE_API_KEY){navigate("/login");return;}api.health().then(()=>setOnline(true)).catch(()=>setOnline(false));refresh();},[refresh,navigate]);
 
   const gps=()=>{if(!navigator.geolocation){setError("GPS is not available in this browser.");return;}navigator.geolocation.getCurrentPosition(p=>{setCoords({latitude:p.coords.latitude,longitude:p.coords.longitude});setLocation("GPS location captured");setError(null);},e=>setError(e.message||"Could not get GPS location."),{enableHighAccuracy:true,timeout:10000,maximumAge:30000});};
   const submit=async()=>{if(!file)return;setLoading(true);setError(null);try{const r=await api.analyzeImage(file,location,coords?.latitude,coords?.longitude);setSelected(r);setFile(null);setLocation("");setCoords(null);await refresh();}catch(e){setError(e instanceof Error?e.message:"Analysis failed");}finally{setLoading(false);}};

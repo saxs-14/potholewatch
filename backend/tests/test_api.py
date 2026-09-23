@@ -77,3 +77,20 @@ def test_analyze_demo_runs_end_to_end():
     if r.status_code == 200:
         body = r.json()
         assert body["severity"] in ("none", "minor", "moderate", "severe")
+
+
+def test_auth_registration_and_login():
+    email = "student-test@example.com"
+    password = "strong-password-123"
+    created = client.post("/api/auth/register", json={"email": email, "password": password})
+    assert created.status_code in (200, 409)
+    logged = client.post("/api/auth/login", json={"email": email, "password": password})
+    assert logged.status_code == 200
+    token = logged.json()["access_token"]
+    protected = client.get("/api/reports", headers={"Authorization": "Bearer " + token})
+    assert protected.status_code == 200
+
+
+def test_auth_rejects_short_password():
+    r = client.post("/api/auth/register", json={"email": "short@example.com", "password": "short"})
+    assert r.status_code == 422

@@ -34,7 +34,7 @@ export default function Landing() {
 
       <header className="flex items-center justify-between px-6 py-5 max-w-6xl mx-auto">
         <div className="flex items-center gap-2 font-semibold text-lg"><span className="inline-block h-2.5 w-2.5 rounded-full bg-orange-500" />PotholeWatch</div>
-        <Link to="/app" className="rounded-lg bg-orange-600 hover:bg-orange-500 px-4 py-2 text-sm font-medium">Open application</Link>
+        <Link to="/login" className="rounded-lg bg-orange-600 hover:bg-orange-500 px-4 py-2 text-sm font-medium">Open application</Link>
       </header>
 
       <main className="max-w-6xl mx-auto px-6">
