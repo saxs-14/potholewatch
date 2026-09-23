@@ -32,6 +32,8 @@ export const api={
   report:(id:number)=>fetch(\`\${API_BASE}/reports/\${id}\`,{headers:authHeaders()}).then(r=>json<Report>(r)),
   history:(id:number)=>fetch(\`\${API_BASE}/reports/\${id}/history\`,{headers:authHeaders()}).then(r=>json(r)),
   updateStatus:(id:number,status:string,note?:string)=>fetch(\`\${API_BASE}/reports/\${id}/status\`,{method:"PATCH",headers:{...authHeaders(),"Content-Type":"application/json"},body:JSON.stringify({status,note})}).then(r=>json<Report>(r)),
+  workOrders:(id:number)=>fetch(`\${API_BASE}/reports/\${id}/work-orders`,{headers:authHeaders()}).then(r=>json(r)),
+  createWorkOrder:(id:number,data:object)=>fetch(`\${API_BASE}/reports/\${id}/work-orders`,{method:"POST",headers:{...authHeaders(),"Content-Type":"application/json"},body:JSON.stringify(data)}).then(r=>json(r)),
   exportEvents:()=>downloadFile(\`\${API_BASE}/reports/export\`,"potholewatch_reports.csv"),
   runDemo:()=>fetch(\`\${API_BASE}/analyze/demo\`,{method:"POST",headers:authHeaders()}).then(r=>json<Report>(r)),
   analyzeImage:(file:File,location:string,latitude?:number,longitude?:number)=>{const form=new FormData();form.set("file",file);if(location)form.set("location",location);if(latitude!==undefined)form.set("latitude",String(latitude));if(longitude!==undefined)form.set("longitude",String(longitude));return fetch(\`\${API_BASE}/analyze\`,{method:"POST",headers:authHeaders(),body:form}).then(r=>json<Report>(r));},
