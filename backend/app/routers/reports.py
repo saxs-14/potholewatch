@@ -133,8 +133,10 @@ def get_report(report_id: int, db: Session = Depends(get_db), owner: Optional[Us
 
 
 @router.get("/reports/{report_id}/history", response_model=List[StatusHistoryOut])
-def get_report_history(report_id: int, db: Session = Depends(get_db)):
+def get_report_history(report_id: int, db: Session = Depends(get_db), owner: Optional[User] = Depends(require_user)):
     if db.get(PotholeReport, report_id) is None:
+        raise HTTPException(status_code=404, detail="Report not found")
+    if owner is not None and owner.role == "citizen" and db.query(ReportOwner).filter_by(report_id=report_id, user_id=owner.id).first() is None:
         raise HTTPException(status_code=404, detail="Report not found")
     return (
         db.query(ReportStatusHistory)
@@ -219,8 +221,11 @@ def get_evidence(evidence_name: str, db: Session = Depends(get_db), owner: Optio
     return FileResponse(path)
 
 @router.get("/reports/export")
-def export_reports(db: Session = Depends(get_db)):
-    reports = db.query(PotholeReport).order_by(PotholeReport.created_at.desc()).all()
+def export_reports(db: Session = Depends(get_db), owner: Optional[User] = Depends(require_user)):
+    query = db.query(PotholeReport)
+    if owner is not None and owner.role == "citizen":
+        query = query.join(ReportOwner, ReportOwner.report_id == PotholeReport.id).filter(ReportOwner.user_id == owner.id)
+    reports = query.order_by(PotholeReport.created_at.desc()).all()
     buf = io.StringIO()
     writer = csv.writer(buf)
     writer.writerow([
@@ -241,13 +246,16 @@ def export_reports(db: Session = Depends(get_db)):
 
 
 @router.get("/dashboard/summary", response_model=DashboardSummary)
-def summary(db: Session = Depends(get_db)):
-    total_reports = db.query(func.count(PotholeReport.id)).scalar() or 0
-    total_potholes = db.query(func.sum(PotholeReport.pothole_count)).scalar() or 0
-    severe = db.query(func.count(PotholeReport.id)).filter(PotholeReport.severity == "severe").scalar() or 0
-    avg_conf = db.query(func.avg(PotholeReport.confidence)).scalar() or 0.0
-    fixed = db.query(func.count(PotholeReport.id)).filter(PotholeReport.status == "fixed").scalar() or 0
-    open_reports = db.query(func.count(PotholeReport.id)).filter(PotholeReport.status.notin_(["fixed", "rejected"])).scalar() or 0
+def summary(db: Session = Depends(get_db), owner: Optional[User] = Depends(require_user)):
+    base = db.query(PotholeReport)
+    if owner is not None and owner.role == "citizen":
+        base = base.join(ReportOwner, ReportOwner.report_id == PotholeReport.id).filter(ReportOwner.user_id == owner.id)
+    total_reports = base.with_entities(func.count(PotholeReport.id)).scalar() or 0
+    total_potholes = base.with_entities(func.sum(PotholeReport.pothole_count)).scalar() or 0
+    severe = base.with_entities(func.count(PotholeReport.id)).filter(PotholeReport.severity == "severe").scalar() or 0
+    avg_conf = base.with_entities(func.avg(PotholeReport.confidence)).scalar() or 0.0
+    fixed = base.with_entities(func.count(PotholeReport.id)).filter(PotholeReport.status == "fixed").scalar() or 0
+    open_reports = base.with_entities(func.count(PotholeReport.id)).filter(PotholeReport.status.notin_(["fixed", "rejected"])).scalar() or 0
     return DashboardSummary(
         total_reports=total_reports,
         total_potholes=total_potholes,
