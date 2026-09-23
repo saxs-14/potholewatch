@@ -22,10 +22,18 @@ async function downloadFile(url:string,filename:string){
   const res=await fetch(url,{headers:authHeaders()}); if(!res.ok) throw new Error(await res.text().catch(()=>res.statusText));
   const blob=await res.blob(), objectUrl=URL.createObjectURL(blob), a=document.createElement("a"); a.href=objectUrl;a.download=filename;document.body.appendChild(a);a.click();a.remove();URL.revokeObjectURL(objectUrl);
 }
+
+const OFFLINE_DB="potholewatch-offline";
+function openOfflineDb():Promise<IDBDatabase>{return new Promise((resolve,reject)=>{const req=indexedDB.open(OFFLINE_DB,1);req.onupgradeneeded=()=>{if(!req.result.objectStoreNames.contains("reports"))req.result.createObjectStore("reports",{keyPath:"id",autoIncrement:true});};req.onsuccess=()=>resolve(req.result);req.onerror=()=>reject(req.error);});}
+async function queueReport(file:File,location:string,latitude?:number,longitude?:number){const db=await openOfflineDb();await new Promise<void>((resolve,reject)=>{const tx=db.transaction("reports","readwrite");tx.objectStore("reports").add({file,location,latitude,longitude,createdAt:Date.now()});tx.oncomplete=()=>resolve();tx.onerror=()=>reject(tx.error);});db.close();}
+async function flushOfflineReports(){if(!navigator.onLine)return 0;const db=await openOfflineDb();const items=await new Promise<any[]>((resolve,reject)=>{const tx=db.transaction("reports","readonly");const req=tx.objectStore("reports").getAll();req.onsuccess=()=>resolve(req.result);req.onerror=()=>reject(req.error);});let sent=0;for(const item of items){try{await api.analyzeImage(item.file,item.location,item.latitude,item.longitude);await new Promise<void>((resolve,reject)=>{const tx=db.transaction("reports","readwrite");tx.objectStore("reports").delete(item.id);tx.oncomplete=()=>resolve();tx.onerror=()=>reject(tx.error);});sent++;}catch{break;}}db.close();return sent;}
+
 export const api={
   register:async(email:string,password:string)=>{const r=await fetch(`${API_BASE}/auth/register`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({email,password})});const v=await json<{access_token:string;user:AuthUser}>(r);localStorage.setItem("potholewatch_token",v.access_token);return v;},
   login:async(email:string,password:string)=>{const r=await fetch(`${API_BASE}/auth/login`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({email,password})});const v=await json<{access_token:string;user:AuthUser}>(r);localStorage.setItem("potholewatch_token",v.access_token);return v;},
   logout:()=>localStorage.removeItem("potholewatch_token"),
+  queueOfflineReport:queueReport,
+  flushOfflineReports,
   health:()=>fetch(`${API_BASE}/health`).then(r=>json<{status:string}>(r)),
   summary:()=>fetch(`${API_BASE}/dashboard/summary`,{headers:authHeaders()}).then(r=>json<DashboardSummary>(r)),
   reports:()=>fetch(`${API_BASE}/reports`,{headers:authHeaders()}).then(r=>json<Report[]>(r)),
