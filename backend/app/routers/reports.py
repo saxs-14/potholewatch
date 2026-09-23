@@ -142,6 +142,15 @@ def update_report_status(report_id: int, update: StatusUpdate, db: Session = Dep
         raise HTTPException(status_code=404, detail="Report not found")
     if report.status == update.status:
         return report
+    allowed = {
+        "reported": {"reviewed", "rejected"},
+        "reviewed": {"scheduled", "rejected"},
+        "scheduled": {"fixed", "rejected"},
+        "fixed": set(),
+        "rejected": set(),
+    }
+    if update.status not in allowed.get(report.status, set()):
+        raise HTTPException(status_code=409, detail=f"Cannot move report from {report.status} to {update.status}")
     previous = report.status
     report.status = update.status
     db.add(ReportStatusHistory(

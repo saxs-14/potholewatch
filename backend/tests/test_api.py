@@ -94,3 +94,12 @@ def test_auth_registration_and_login():
 def test_auth_rejects_short_password():
     r = client.post("/api/auth/register", json={"email": "short@example.com", "password": "short"})
     assert r.status_code == 422
+
+
+def test_status_transitions_are_validated():
+    created = client.post("/api/analyze/demo")
+    if created.status_code == 404:
+        return
+    report_id = created.json()["id"]
+    r = client.patch(f"/api/reports/{report_id}/status", json={"status": "fixed"})
+    assert r.status_code == 409
