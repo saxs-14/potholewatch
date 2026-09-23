@@ -1,156 +1,73 @@
 # PotholeWatch
 
-AI-assisted pothole detection and road-condition reporting MVP.
+PotholeWatch is a road-damage reporting system that combines computer vision, evidence capture, GPS coordinates and a review workflow.
 
-## Problem statement
+## Working capabilities
 
-Potholes damage vehicles and cause accidents, but municipalities and fleets often lack
-timely, structured data on where road damage actually is.
+- JPEG/PNG/WebP uploads with server-side type, size and decode validation
+- Existing OpenCV + MobileNetV2 AI-assisted analysis
+- Browser GPS capture
+- Persistent reports with stable IDs such as PW-000001
+- Evidence image storage
+- Report detail view
+- Workflow statuses: reported, reviewed, scheduled, fixed and rejected
+- Status history for auditability
+- Dashboard KPIs for reports, potholes, severe/open/fixed reports and confidence
+- CSV export including coordinates and status
+- Demo data
+- FastAPI Swagger documentation at /docs
+- Docker support
+- Automated GitHub Actions build/test checks
 
-## Solution
+## Local development
 
-Upload a road photo and PotholeWatch detects damaged regions, rates severity, and logs a
-reviewable record — with or without GPS — building a dashboard of road conditions over
-time.
-
-## Features
-
-- Pothole detection from a single photo (no video required)
-- Severity classification (none / minor / moderate / severe)
-- Manual location entry (works without GPS)
-- Road-condition dashboard: counts, severity breakdown, average confidence
-- Report status field (reported → reviewed → scheduled → fixed)
-- CSV export
-- Demo mode using bundled real road-damage sample photos
-
-## Architecture
-
-```text
-frontend (React/Vite/TS/Tailwind)  ->  backend (FastAPI)  ->  SQLite
-                                              |
-                            classical CV (count/coverage) + trained MobileNetV2
-                                  severity classifier (none/minor/moderate/severe)
-```
-
-## Technology stack
-
-Python, FastAPI, SQLAlchemy, SQLite, OpenCV, PyTorch/TorchVision; React, TypeScript, Vite,
-Tailwind CSS.
-
-## Folder structure
-
-```text
-potholewatch/
-├── backend/
-│   ├── app/
-│   │   └── ml_model/  # Trained TorchScript classifier (potholewatch_classifier.pt)
-│   ├── demo/          # Bundled sample road-damage photos
-│   └── tests/
-├── frontend/
-│   └── src/             # Landing page + dashboard
-├── docker-compose.yml
-└── README.md
-```
-
-## Installation
+### Backend
 
 ```bash
 cd backend
-python -m venv venv && venv\Scripts\activate
+python -m venv venv
+# Windows: venv\\Scripts\\activate
+# Linux/macOS: source venv/bin/activate
 pip install -r requirements.txt
-cp .env.example .env
+copy .env.example .env
+uvicorn app.main:app --reload
 ```
+
+### Frontend
 
 ```bash
-cd frontend && npm install
+cd frontend
+npm install
+copy .env.example .env
+npm run build
+npm run dev
 ```
 
-## Environment variables
+The frontend no longer contains a hard-coded API key. Set VITE_API_KEY to the development/deployment credential supplied to the backend. Do not treat a browser-exposed API key as a user secret.
 
-`UPLOAD_DIR`, `MAX_UPLOAD_MB`, `CORS_ORIGINS` — see `backend/.env.example`.
+## API
 
-## Running locally
+- GET /api/health
+- POST /api/analyze
+- POST /api/analyze/demo
+- GET /api/reports
+- GET /api/reports/{id}
+- GET /api/reports/{id}/history
+- PATCH /api/reports/{id}/status
+- GET /api/reports/export
+- GET /api/dashboard/summary
 
-```bash
-# Terminal 1
-cd backend && venv\Scripts\activate && uvicorn app.main:app --reload
-# Terminal 2
-cd frontend && npm run dev
-```
+## Reality roadmap
 
-Open http://localhost:5173. Docker: `docker compose up --build`.
+The current application is a working foundation, but it is not yet a municipal production deployment. The remaining major work is deliberately separated into independent phases:
 
-## Demo instructions
+1. **Identity:** replace the single deployment API key with per-user authentication and role-based authorization.
+2. **Database:** add migrations and move hosted deployments from SQLite to PostgreSQL.
+3. **Maps:** add an interactive OpenStreetMap/Leaflet map, marker clustering and hotspot views.
+4. **AI detection:** replace the classical contour count with a properly evaluated object-detection model that returns per-pothole bounding boxes and confidence.
+5. **Duplicate handling:** cluster reports referring to the same physical road defect.
+6. **Maintenance:** add work orders, teams, assignments, schedules, repair evidence and inspection/closure.
+7. **Offline:** make the frontend an offline-first PWA with a queued upload process.
+8. **Production operations:** backups, structured logging, monitoring, security testing, audit controls and deployment documentation.
 
-Click **Run demo sample** — it analyzes one of the bundled real road-damage photos
-(sourced from Wikimedia Commons, CC-licensed). Upload your own road photo to try it with
-different footage; manual location entry is available since GPS isn't always present in a
-photo upload flow.
-
-## API documentation
-
-Docs at `/docs`. Key endpoints: `POST /api/analyze`, `POST /api/analyze/demo`,
-`GET /api/reports`, `GET /api/reports/export`, `GET /api/dashboard/summary`.
-
-## Database
-
-SQLite: `pothole_reports` (count, severity, confidence, coverage %, location, status).
-
-## Security considerations
-
-- **API key required on every endpoint except `/api/health`.** Set `API_KEY` (backend
-  `.env`) and `VITE_API_KEY` (frontend `.env`) to the same value before deploying anywhere
-  reachable outside your own machine — the default (`dev-local-key-change-me`) is for
-  local development only. Single-tenant "licensed instance" model, not per-user accounts.
-- Rate limiting (30 req/60s/IP) on the API.
-- Upload size/type validated server-side, CORS restricted, no secrets in source.
-
-## Privacy considerations
-
-Road photos may incidentally include people, vehicles or license plates. No facial or
-plate recognition is performed by this system, but deployers should apply their own
-redaction policy before publishing raw photos externally.
-
-## Limitations
-
-- **Pothole count and coverage % still come from classical image analysis** (adaptive
-  thresholding + contour shape filtering) — a model can't produce a blob count on its own.
-  This will still misfire on shadows, drain covers, oil stains, and other dark irregular
-  patches that aren't actually potholes; confidence scores are capped well below 1.0 to
-  reflect this.
-- **The "severity" label comes from a trained MobileNetV2 classifier** (frozen ImageNet
-  backbone + trained classifier head), fine-tuned on ~900 labeled road-damage photos
-  (none/minor/moderate/severe) — the original 297-image set plus a CC0-licensed
-  road-issues dataset added to the moderate/severe classes. It reached **76.0% held-out
-  validation accuracy**, up from 67.8% on the smaller dataset — a real, retrain-verified
-  improvement, though still the weakest of this portfolio's trained models. The **"none"
-  (clean road) class still has only 40 training images** — no larger source of
-  labeled clean-road photos was found — so the class imbalance (40 vs. 355-396 for
-  moderate/severe) hasn't fully resolved, and the model may be biased toward predicting
-  damage even on a clean road. Treat severity labels as indicative, not authoritative.
-- **Count and severity can disagree** — because they come from two independent signals,
-  a real photo can show `pothole_count: 0` (the contour detector found no dark blob
-  matching its shape filter) alongside a non-"none" severity (the trained model still
-  recognised road damage from the whole photo). This is observed, expected behaviour, not
-  a bug — the model can catch damage the classical blob detector misses — but it can look
-  inconsistent in the UI and is worth surfacing to users rather than silently reconciled.
-- Single-image analysis only — no cross-photo deduplication of the same physical pothole.
-
-## Business model
-
-**Target customers**: municipalities, transport/logistics companies, insurance companies,
-road maintenance contractors.
-
-**Revenue**: SaaS subscription, per-vehicle fleet subscription, municipal contracts,
-data/reporting services.
-
-## Future improvements
-
-- Train a proper object-detection model on labeled pothole imagery
-- Map-based visualization (the schema already carries lat/lon)
-- Duplicate-report clustering by location
-- Integration with municipal work-order systems
-
-## Screenshots
-
-Run locally (see "Running locally") and click **Run demo sample** on `/app`.
+AI output is advisory. A responsible human should verify road damage before maintenance action.
