@@ -145,7 +145,7 @@ def get_report_history(report_id: int, db: Session = Depends(get_db)):
 
 
 @router.patch("/reports/{report_id}/status", response_model=ReportOut)
-def update_report_status(report_id: int, update: StatusUpdate, db: Session = Depends(get_db)):
+def update_report_status(report_id: int, update: StatusUpdate, db: Session = Depends(get_db), _: Optional[User] = Depends(require_roles("reviewer", "maintenance", "manager", "admin"))):
     report = db.get(PotholeReport, report_id)
     if report is None:
         raise HTTPException(status_code=404, detail="Report not found")
@@ -175,14 +175,16 @@ def update_report_status(report_id: int, update: StatusUpdate, db: Session = Dep
 
 
 @router.get("/reports/{report_id}/work-orders", response_model=List[WorkOrderOut])
-def list_work_orders(report_id: int, db: Session = Depends(get_db)):
+def list_work_orders(report_id: int, db: Session = Depends(get_db), owner: Optional[User] = Depends(require_user)):
     if db.get(PotholeReport, report_id) is None:
+        raise HTTPException(status_code=404, detail="Report not found")
+    if owner is not None and owner.role == "citizen" and db.query(ReportOwner).filter_by(report_id=report_id, user_id=owner.id).first() is None:
         raise HTTPException(status_code=404, detail="Report not found")
     return db.query(WorkOrder).filter(WorkOrder.report_id == report_id).order_by(WorkOrder.created_at.desc()).all()
 
 
 @router.post("/reports/{report_id}/work-orders", response_model=WorkOrderOut, status_code=201)
-def create_work_order(report_id: int, data: WorkOrderCreate, db: Session = Depends(get_db)):
+def create_work_order(report_id: int, data: WorkOrderCreate, db: Session = Depends(get_db), _: Optional[User] = Depends(require_roles("maintenance", "manager", "admin"))):
     if db.get(PotholeReport, report_id) is None:
         raise HTTPException(status_code=404, detail="Report not found")
     if data.priority not in ("low", "normal", "high", "urgent"):
@@ -193,7 +195,7 @@ def create_work_order(report_id: int, data: WorkOrderCreate, db: Session = Depen
 
 
 @router.patch("/work-orders/{work_order_id}/status", response_model=WorkOrderOut)
-def update_work_order_status(work_order_id: int, status: str, db: Session = Depends(get_db)):
+def update_work_order_status(work_order_id: int, status: str, db: Session = Depends(get_db), _: Optional[User] = Depends(require_roles("maintenance", "manager", "admin"))):
     if status not in ("open", "assigned", "in_progress", "completed", "cancelled"):
         raise HTTPException(status_code=400, detail="Invalid work order status")
     order = db.get(WorkOrder, work_order_id)
