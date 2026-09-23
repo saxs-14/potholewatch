@@ -9,6 +9,7 @@ class Settings(BaseSettings):
     upload_dir: str = "./uploads"
     max_upload_mb: int = 20
     api_key: str = "dev-local-key-change-me"\n    auth_secret: str = "dev-auth-secret-change-me"\n    admin_email: str = ""
+    auto_create_schema: bool = True
 
     class Config:
         env_file = ".env"
