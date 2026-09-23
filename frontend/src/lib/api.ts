@@ -37,5 +37,5 @@ export const api={
   exportEvents:()=>downloadFile(`${API_BASE}/reports/export`,"potholewatch_reports.csv"),
   runDemo:()=>fetch(`${API_BASE}/analyze/demo`,{method:"POST",headers:authHeaders()}).then(r=>json<Report>(r)),
   analyzeImage:(file:File,location:string,latitude?:number,longitude?:number)=>{const form=new FormData();form.set("file",file);if(location)form.set("location",location);if(latitude!==undefined)form.set("latitude",String(latitude));if(longitude!==undefined)form.set("longitude",String(longitude));return fetch(`${API_BASE}/analyze`,{method:"POST",headers:authHeaders(),body:form}).then(r=>json<Report>(r));},
-  evidenceUrl:(path:string|null)=>path?`${API_BASE}/evidence/${encodeURIComponent(path)}`:null,
+  evidenceBlob:async(path:string)=>{const r=await fetch(`${API_BASE}/evidence/${encodeURIComponent(path)}`,{headers:authHeaders()});if(!r.ok)throw new Error("Evidence unavailable");return URL.createObjectURL(await r.blob());},
 };
