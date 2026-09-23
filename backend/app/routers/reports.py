@@ -44,7 +44,7 @@ def _validate_coordinates(latitude: Optional[float], longitude: Optional[float])
         raise HTTPException(status_code=400, detail="Longitude must be between -180 and 180")
 
 
-def _persist(db, filename, result, location, lat, lon, evidence_path):
+def _persist(db, filename, result, location, lat, lon, evidence_path, owner=None):
     report = PotholeReport(
         source_filename=filename,
         pothole_count=result["pothole_count"],
@@ -58,6 +58,8 @@ def _persist(db, filename, result, location, lat, lon, evidence_path):
     )
     db.add(report)
     db.flush()
+    if owner is not None:
+        db.add(ReportOwner(report_id=report.id, user_id=owner.id))
     db.add(ReportStatusHistory(report_id=report.id, from_status=None, to_status="reported", note="Report submitted"))
     db.commit()
     db.refresh(report)
@@ -71,6 +73,7 @@ async def analyze(
     latitude: Optional[float] = Form(default=None),
     longitude: Optional[float] = Form(default=None),
     db: Session = Depends(get_db),
+    owner: Optional[User] = Depends(require_user),
 ):
     if file.content_type not in ALLOWED_CONTENT_TYPES:
         raise HTTPException(status_code=415, detail="Only JPEG, PNG, and WebP images are accepted")
@@ -94,11 +97,11 @@ async def analyze(
     if not cv2.imwrite(evidence_path, frame):
         raise HTTPException(status_code=500, detail="Could not store image evidence")
 
-    return _persist(db, safe_name, result, location, latitude, longitude, evidence_name)
+    return _persist(db, safe_name, result, location, latitude, longitude, evidence_name, owner)
 
 
 @router.post("/analyze/demo", response_model=ReportOut)
-def analyze_demo(db: Session = Depends(get_db)):
+def analyze_demo(db: Session = Depends(get_db), owner: Optional[User] = Depends(require_user)):
     samples = glob.glob(os.path.join(DEMO_DIR, "*.jpg")) + glob.glob(os.path.join(DEMO_DIR, "*.png"))
     if not samples:
         raise HTTPException(status_code=404, detail="No demo images found on server")
@@ -107,7 +110,7 @@ def analyze_demo(db: Session = Depends(get_db)):
     if frame is None:
         raise HTTPException(status_code=500, detail="Demo image could not be read")
     result = analyze_image(frame)
-    return _persist(db, os.path.basename(path), result, "Demo sample road", None, None, None)
+    return _persist(db, os.path.basename(path), result, "Demo sample road", None, None, None, owner)
 
 
 @router.get("/reports", response_model=List[ReportOut])
