@@ -32,4 +32,4 @@ The AI is advisory, not a certified road-engineering measurement system. The cur
 
 The repository does not claim a hosted production deployment is already configured. A deployment provider, domain, HTTPS, backups, monitoring and retention policy must be configured by the operator.
 
-The PWA currently provides an offline application shell; queued offline photo submission is not yet enabled.
+The PWA provides an offline application shell and an IndexedDB queue for failed photo submissions. Queued submissions retry when connectivity returns; users should still keep the browser/device available until synchronization succeeds.
