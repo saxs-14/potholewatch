@@ -27,7 +27,7 @@ export default function Dashboard() {
 
   return <div className="min-h-screen bg-slate-950 text-slate-100">
     <Helmet><title>Dashboard — PotholeWatch</title><meta name="robots" content="noindex,nofollow"/></Helmet>
-    <header className="flex items-center justify-between px-6 py-4 border-b border-slate-800"><Link to="/" className="font-semibold">● PotholeWatch</Link><span className="text-xs">{online===null?"Checking…":online?"● Backend online":"● Backend offline"}</span></header>
+    <header className="flex items-center justify-between px-6 py-4 border-b border-slate-800"><Link to="/" className="font-semibold">● PotholeWatch</Link><div className="flex items-center gap-4"><Link to="/map" className="text-sm text-orange-400">Map</Link><button onClick={()=>{api.logout();window.location.href="/login"}} className="text-sm text-slate-400">Sign out</button><span className="text-xs">{online===null?"Checking…":online?"● Backend online":"● Backend offline"}</span></div></header>
     <main className="max-w-6xl mx-auto px-6 py-8 space-y-6">
       {!online&&online!==null&&<div className="rounded-lg border border-red-500/40 bg-red-500/10 p-4 text-sm">Backend unavailable. Start FastAPI locally with <code>uvicorn app.main:app --reload</code>.</div>}
       <section className="rounded-xl border border-slate-800 bg-slate-900/60 p-5">

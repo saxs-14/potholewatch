@@ -5,6 +5,7 @@ import { HelmetProvider } from "react-helmet-async";
 import "./index.css";
 import Landing from "./pages/Landing";
 import Login from "./pages/Login";
+import MapPage from "./pages/MapPage";
 
 const Dashboard=lazy(()=>import("./pages/Dashboard"));
-ReactDOM.createRoot(document.getElementById("root")!).render(<React.StrictMode><HelmetProvider><BrowserRouter><Routes><Route path="/" element={<Landing/>}/><Route path="/login" element={<Login/>}/><Route path="/app" element={<Suspense fallback={<div className="min-h-screen bg-slate-950"/>}><Dashboard/></Suspense>}/></Routes></BrowserRouter></HelmetProvider></React.StrictMode>);
+ReactDOM.createRoot(document.getElementById("root")!).render(<React.StrictMode><HelmetProvider><BrowserRouter><Routes><Route path="/" element={<Landing/>}/><Route path="/login" element={<Login/>}/><Route path="/map" element={<MapPage/>}/><Route path="/app" element={<Suspense fallback={<div className="min-h-screen bg-slate-950"/>}><Dashboard/></Suspense>}/></Routes></BrowserRouter></HelmetProvider></React.StrictMode>);
