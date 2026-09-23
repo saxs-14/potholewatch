@@ -11,7 +11,7 @@ export interface AuthUser { id:number; email:string; role:string; }
 const storedToken=()=>localStorage.getItem("potholewatch_token");
 function authHeaders():HeadersInit {
   const token=storedToken();
-  if(token) return {Authorization:\`Bearer \${token}\`};
+  if(token) return {Authorization:\`Bearer ${token}\`};
   return API_KEY ? {"X-API-Key":API_KEY} : {};
 }
 async function json<T>(res:Response):Promise<T>{
@@ -23,19 +23,19 @@ async function downloadFile(url:string,filename:string){
   const blob=await res.blob(), objectUrl=URL.createObjectURL(blob), a=document.createElement("a"); a.href=objectUrl;a.download=filename;document.body.appendChild(a);a.click();a.remove();URL.revokeObjectURL(objectUrl);
 }
 export const api={
-  register:async(email:string,password:string)=>{const r=await fetch(\`\${API_BASE}/auth/register\`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({email,password})});const v=await json<{access_token:string;user:AuthUser}>(r);localStorage.setItem("potholewatch_token",v.access_token);return v;},
-  login:async(email:string,password:string)=>{const r=await fetch(\`\${API_BASE}/auth/login\`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({email,password})});const v=await json<{access_token:string;user:AuthUser}>(r);localStorage.setItem("potholewatch_token",v.access_token);return v;},
+  register:async(email:string,password:string)=>{const r=await fetch(\`${API_BASE}/auth/register\`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({email,password})});const v=await json<{access_token:string;user:AuthUser}>(r);localStorage.setItem("potholewatch_token",v.access_token);return v;},
+  login:async(email:string,password:string)=>{const r=await fetch(\`${API_BASE}/auth/login\`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({email,password})});const v=await json<{access_token:string;user:AuthUser}>(r);localStorage.setItem("potholewatch_token",v.access_token);return v;},
   logout:()=>localStorage.removeItem("potholewatch_token"),
-  health:()=>fetch(\`\${API_BASE}/health\`).then(r=>json<{status:string}>(r)),
-  summary:()=>fetch(\`\${API_BASE}/dashboard/summary\`,{headers:authHeaders()}).then(r=>json<DashboardSummary>(r)),
-  reports:()=>fetch(\`\${API_BASE}/reports\`,{headers:authHeaders()}).then(r=>json<Report[]>(r)),
-  report:(id:number)=>fetch(\`\${API_BASE}/reports/\${id}\`,{headers:authHeaders()}).then(r=>json<Report>(r)),
-  history:(id:number)=>fetch(\`\${API_BASE}/reports/\${id}/history\`,{headers:authHeaders()}).then(r=>json(r)),
-  updateStatus:(id:number,status:string,note?:string)=>fetch(\`\${API_BASE}/reports/\${id}/status\`,{method:"PATCH",headers:{...authHeaders(),"Content-Type":"application/json"},body:JSON.stringify({status,note})}).then(r=>json<Report>(r)),
-  workOrders:(id:number)=>fetch(`\${API_BASE}/reports/\${id}/work-orders`,{headers:authHeaders()}).then(r=>json(r)),
-  createWorkOrder:(id:number,data:object)=>fetch(`\${API_BASE}/reports/\${id}/work-orders`,{method:"POST",headers:{...authHeaders(),"Content-Type":"application/json"},body:JSON.stringify(data)}).then(r=>json(r)),
-  exportEvents:()=>downloadFile(\`\${API_BASE}/reports/export\`,"potholewatch_reports.csv"),
-  runDemo:()=>fetch(\`\${API_BASE}/analyze/demo\`,{method:"POST",headers:authHeaders()}).then(r=>json<Report>(r)),
-  analyzeImage:(file:File,location:string,latitude?:number,longitude?:number)=>{const form=new FormData();form.set("file",file);if(location)form.set("location",location);if(latitude!==undefined)form.set("latitude",String(latitude));if(longitude!==undefined)form.set("longitude",String(longitude));return fetch(\`\${API_BASE}/analyze\`,{method:"POST",headers:authHeaders(),body:form}).then(r=>json<Report>(r));},
-  evidenceUrl:(path:string|null)=>path?\`\${API_BASE.replace(/\/api$/,"")}/uploads/\${encodeURIComponent(path)}\`:null,
+  health:()=>fetch(\`${API_BASE}/health\`).then(r=>json<{status:string}>(r)),
+  summary:()=>fetch(\`${API_BASE}/dashboard/summary\`,{headers:authHeaders()}).then(r=>json<DashboardSummary>(r)),
+  reports:()=>fetch(\`${API_BASE}/reports\`,{headers:authHeaders()}).then(r=>json<Report[]>(r)),
+  report:(id:number)=>fetch(\`${API_BASE}/reports/${id}\`,{headers:authHeaders()}).then(r=>json<Report>(r)),
+  history:(id:number)=>fetch(\`${API_BASE}/reports/${id}/history\`,{headers:authHeaders()}).then(r=>json(r)),
+  updateStatus:(id:number,status:string,note?:string)=>fetch(\`${API_BASE}/reports/${id}/status\`,{method:"PATCH",headers:{...authHeaders(),"Content-Type":"application/json"},body:JSON.stringify({status,note})}).then(r=>json<Report>(r)),
+  workOrders:(id:number)=>fetch(`${API_BASE}/reports/${id}/work-orders`,{headers:authHeaders()}).then(r=>json(r)),
+  createWorkOrder:(id:number,data:object)=>fetch(`${API_BASE}/reports/${id}/work-orders`,{method:"POST",headers:{...authHeaders(),"Content-Type":"application/json"},body:JSON.stringify(data)}).then(r=>json(r)),
+  exportEvents:()=>downloadFile(\`${API_BASE}/reports/export\`,"potholewatch_reports.csv"),
+  runDemo:()=>fetch(\`${API_BASE}/analyze/demo\`,{method:"POST",headers:authHeaders()}).then(r=>json<Report>(r)),
+  analyzeImage:(file:File,location:string,latitude?:number,longitude?:number)=>{const form=new FormData();form.set("file",file);if(location)form.set("location",location);if(latitude!==undefined)form.set("latitude",String(latitude));if(longitude!==undefined)form.set("longitude",String(longitude));return fetch(\`${API_BASE}/analyze\`,{method:"POST",headers:authHeaders(),body:form}).then(r=>json<Report>(r));},
+  evidenceUrl:(path:string|null)=>path?\`${API_BASE.replace(/\/api$/,"")}/uploads/${encodeURIComponent(path)}\`:null,
 };
