@@ -1,6 +1,5 @@
 from fastapi import Depends, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.staticfiles import StaticFiles
 from app.config import settings
 from app.database import Base, engine
 from app.auth import require_auth
@@ -16,7 +15,6 @@ app.add_middleware(
     allow_methods=["GET", "POST", "PATCH", "OPTIONS"],
     allow_headers=["Authorization", "X-API-Key", "Content-Type"],
 )
-app.mount("/uploads", StaticFiles(directory=settings.upload_dir), name="uploads")
 app.include_router(health.router)
 app.include_router(auth.router)
 app.include_router(reports.router, dependencies=[Depends(require_auth), Depends(rate_limit(max_requests=30, window_seconds=60))])
