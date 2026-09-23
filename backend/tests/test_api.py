@@ -83,7 +83,8 @@ def test_analyze_demo_runs_end_to_end():
 def test_auth_registration_and_login():
     email = "student-test@example.com"
     password = "strong-password-123"
-    created = client.post("/api/auth/register", json={"email": email, "password": password})
+    user_client = TestClient(app)
+    created = user_client.post("/api/auth/register", json={"email": email, "password": password})
     assert created.status_code in (200, 409)
     logged = client.post("/api/auth/login", json={"email": email, "password": password})
     assert logged.status_code == 200
@@ -116,15 +117,15 @@ def _login_test_user():
 def test_citizen_reports_are_isolated_and_cannot_change_workflow():
     token = _login_test_user()
     headers = {"Authorization": "Bearer " + token}
-    created = client.post("/api/analyze/demo", headers=headers)
+    created = TestClient(app).post("/api/analyze/demo", headers=headers)
     if created.status_code == 404:
         return
     assert created.status_code == 200
     report_id = created.json()["id"]
-    mine = client.get("/api/reports", headers=headers)
+    mine = TestClient(app).get("/api/reports", headers=headers)
     assert mine.status_code == 200
     assert any(r["id"] == report_id for r in mine.json())
-    forbidden = client.patch(
+    forbidden = TestClient(app).patch(
         f"/api/reports/{report_id}/status",
         headers=headers,
         json={"status": "reviewed"},
@@ -133,12 +134,12 @@ def test_citizen_reports_are_isolated_and_cannot_change_workflow():
 
 def test_second_citizen_cannot_read_first_citizen_report():
     first = _login_test_user()
-    created = client.post("/api/analyze/demo", headers={"Authorization": "Bearer " + first})
+    created = TestClient(app).post("/api/analyze/demo", headers={"Authorization": "Bearer " + first})
     if created.status_code == 404:
         return
     assert created.status_code == 200
     report_id = created.json()["id"]
     second = _login_test_user()
     headers = {"Authorization": "Bearer " + second}
-    assert all(r["id"] != report_id for r in client.get("/api/reports", headers=headers).json())
-    assert client.get(f"/api/reports/{report_id}", headers=headers).status_code == 404
+    assert all(r["id"] != report_id for r in TestClient(app).get("/api/reports", headers=headers).json())
+    assert TestClient(app).get(f"/api/reports/{report_id}", headers=headers).status_code == 404
