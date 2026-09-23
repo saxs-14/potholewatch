@@ -89,6 +89,8 @@ async def analyze(
     frame = cv2.imdecode(img_array, cv2.IMREAD_COLOR)
     if frame is None:
         raise HTTPException(status_code=400, detail="Could not decode image")
+    if frame.shape[0] * frame.shape[1] > 25_000_000:
+        raise HTTPException(status_code=400, detail="Image dimensions are too large")
 
     result = analyze_image(frame)
     safe_name = _safe_filename(file.filename)
