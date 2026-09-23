@@ -6,7 +6,8 @@ from app.auth import require_auth
 from app.rate_limit import rate_limit
 from app.routers import auth, health, reports
 
-Base.metadata.create_all(bind=engine)
+if settings.auto_create_schema:
+    Base.metadata.create_all(bind=engine)
 app = FastAPI(title=settings.app_name, version="2.0.0")
 app.add_middleware(
     CORSMiddleware,
