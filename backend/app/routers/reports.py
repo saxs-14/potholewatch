@@ -10,7 +10,7 @@ from typing import List, Optional
 import cv2
 import numpy as np
 from fastapi import APIRouter, Depends, UploadFile, File, Form, HTTPException
-from fastapi.responses import StreamingResponse
+from fastapi.responses import StreamingResponse, FileResponse
 from sqlalchemy import func
 from sqlalchemy.orm import Session
 
@@ -203,6 +203,20 @@ def update_work_order_status(work_order_id: int, status: str, db: Session = Depe
         raise HTTPException(status_code=404, detail="Work order not found")
     order.status = status; db.commit(); db.refresh(order)
     return order
+
+@router.get("/evidence/{evidence_name}")
+def get_evidence(evidence_name: str, db: Session = Depends(get_db), owner: Optional[User] = Depends(require_user)):
+    safe_name = os.path.basename(evidence_name)
+    report = db.query(PotholeReport).filter(PotholeReport.evidence_path == safe_name).first()
+    if report is None:
+        raise HTTPException(status_code=404, detail="Evidence not found")
+    if owner is not None and owner.role == "citizen" and db.query(ReportOwner).filter_by(report_id=report.id, user_id=owner.id).first() is None:
+        raise HTTPException(status_code=404, detail="Evidence not found")
+    path = os.path.abspath(os.path.join(settings.upload_dir, safe_name))
+    upload_root = os.path.abspath(settings.upload_dir)
+    if os.path.commonpath([path, upload_root]) != upload_root or not os.path.isfile(path):
+        raise HTTPException(status_code=404, detail="Evidence not found")
+    return FileResponse(path)
 
 @router.get("/reports/export")
 def export_reports(db: Session = Depends(get_db)):
