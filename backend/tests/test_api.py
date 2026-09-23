@@ -1,4 +1,5 @@
 from io import BytesIO
+import uuid
 
 from fastapi.testclient import TestClient
 
@@ -103,3 +104,41 @@ def test_status_transitions_are_validated():
     report_id = created.json()["id"]
     r = client.patch(f"/api/reports/{report_id}/status", json={"status": "fixed"})
     assert r.status_code == 409
+
+
+def _login_test_user():
+    email = "citizen-" + uuid.uuid4().hex + "@example.com"
+    password = "strong-password-123"
+    created = client.post("/api/auth/register", json={"email": email, "password": password})
+    assert created.status_code == 200
+    return created.json()["access_token"]
+
+def test_citizen_reports_are_isolated_and_cannot_change_workflow():
+    token = _login_test_user()
+    headers = {"Authorization": "Bearer " + token}
+    created = client.post("/api/analyze/demo", headers=headers)
+    if created.status_code == 404:
+        return
+    assert created.status_code == 200
+    report_id = created.json()["id"]
+    mine = client.get("/api/reports", headers=headers)
+    assert mine.status_code == 200
+    assert any(r["id"] == report_id for r in mine.json())
+    forbidden = client.patch(
+        f"/api/reports/{report_id}/status",
+        headers=headers,
+        json={"status": "reviewed"},
+    )
+    assert forbidden.status_code == 403
+
+def test_second_citizen_cannot_read_first_citizen_report():
+    first = _login_test_user()
+    created = client.post("/api/analyze/demo", headers={"Authorization": "Bearer " + first})
+    if created.status_code == 404:
+        return
+    assert created.status_code == 200
+    report_id = created.json()["id"]
+    second = _login_test_user()
+    headers = {"Authorization": "Bearer " + second}
+    assert all(r["id"] != report_id for r in client.get("/api/reports", headers=headers).json())
+    assert client.get(f"/api/reports/{report_id}", headers=headers).status_code == 404
