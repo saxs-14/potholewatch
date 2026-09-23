@@ -1,5 +1,5 @@
-const API_BASE = (import.meta.env.VITE_API_BASE as string) || "https://potholewatch-607032555709.us-central1.run.app";
-const API_KEY = (import.meta.env.VITE_API_KEY as string) || "622e7c0f04002fc48855aa8d74b3c04311f5893c976fcb97";
+const API_BASE = (import.meta.env.VITE_API_BASE as string | undefined)?.replace(/\/$/, "") || "/api";
+const API_KEY = (import.meta.env.VITE_API_KEY as string | undefined) || "";
 
 export interface Report {
   id: number;
@@ -9,7 +9,10 @@ export interface Report {
   confidence: number;
   coverage_pct: number;
   location: string | null;
+  latitude: number | null;
+  longitude: number | null;
   status: string;
+  evidence_path: string | null;
   created_at: string;
 }
 
@@ -18,14 +21,23 @@ export interface DashboardSummary {
   total_potholes: number;
   severe_count: number;
   avg_confidence: number;
+  open_reports: number;
+  fixed_reports: number;
 }
 
 function authHeaders(): HeadersInit {
-  return { "X-API-Key": API_KEY };
+  return API_KEY ? { "X-API-Key": API_KEY } : {};
 }
 
 async function json<T>(res: Response): Promise<T> {
-  if (!res.ok) throw new Error(await res.text().catch(() => res.statusText));
+  if (!res.ok) {
+    let message = res.statusText;
+    try {
+      const body = await res.json();
+      message = body.detail || message;
+    } catch {}
+    throw new Error(message || "Request failed");
+  }
   return res.json();
 }
 
@@ -44,19 +56,26 @@ async function downloadFile(url: string, filename: string) {
 }
 
 export const api = {
-  health: () => fetch(`${API_BASE}/api/health`).then((r) => json<{ status: string }>(r)),
-  summary: () =>
-    fetch(`${API_BASE}/api/dashboard/summary`, { headers: authHeaders() }).then((r) => json<DashboardSummary>(r)),
-  reports: () => fetch(`${API_BASE}/api/reports`, { headers: authHeaders() }).then((r) => json<Report[]>(r)),
-  exportEvents: () => downloadFile(`${API_BASE}/api/reports/export`, "potholewatch_reports.csv"),
-  runDemo: () =>
-    fetch(`${API_BASE}/api/analyze/demo`, { method: "POST", headers: authHeaders() }).then((r) => json<Report>(r)),
-  analyzeImage: (file: File, location: string) => {
+  health: () => fetch(\`${API_BASE}\/health\`).then((r) => json<{ status: string }>(r)),
+  summary: () => fetch(\`${API_BASE}\/dashboard/summary\`, { headers: authHeaders() }).then((r) => json<DashboardSummary>(r)),
+  reports: () => fetch(\`${API_BASE}\/reports\`, { headers: authHeaders() }).then((r) => json<Report[]>(r)),
+  report: (id: number) => fetch(\`${API_BASE}\/reports/\${id}\`, { headers: authHeaders() }).then((r) => json<Report>(r)),
+  history: (id: number) => fetch(\`${API_BASE}\/reports/\${id}/history\`, { headers: authHeaders() }).then((r) => json(r)),
+  updateStatus: (id: number, status: string, note?: string) =>
+    fetch(\`${API_BASE}\/reports/\${id}/status\`, {
+      method: "PATCH",
+      headers: { ...authHeaders(), "Content-Type": "application/json" },
+      body: JSON.stringify({ status, note }),
+    }).then((r) => json<Report>(r)),
+  exportEvents: () => downloadFile(\`${API_BASE}\/reports/export\`, "potholewatch_reports.csv"),
+  runDemo: () => fetch(\`${API_BASE}\/analyze/demo\`, { method: "POST", headers: authHeaders() }).then((r) => json<Report>(r)),
+  analyzeImage: (file: File, location: string, latitude?: number, longitude?: number) => {
     const form = new FormData();
     form.set("file", file);
     if (location) form.set("location", location);
-    return fetch(`${API_BASE}/api/analyze`, { method: "POST", headers: authHeaders(), body: form }).then((r) =>
-      json<Report>(r)
-    );
+    if (latitude !== undefined) form.set("latitude", String(latitude));
+    if (longitude !== undefined) form.set("longitude", String(longitude));
+    return fetch(\`${API_BASE}\/analyze\`, { method: "POST", headers: authHeaders(), body: form }).then((r) => json<Report>(r));
   },
+  evidenceUrl: (path: string | null) => path ? \`${API_BASE}\/uploads/\${encodeURIComponent(path)}\` : null,
 };
