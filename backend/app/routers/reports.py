@@ -17,8 +17,8 @@ from sqlalchemy.orm import Session
 from app.config import settings
 from app.database import get_db
 from app.detection import analyze_image
-from app.models import PotholeReport, ReportStatusHistory
-from app.schemas import DashboardSummary, ReportOut, StatusHistoryOut, StatusUpdate
+from app.models import PotholeReport, ReportStatusHistory, WorkOrder
+from app.schemas import DashboardSummary, ReportOut, StatusHistoryOut, StatusUpdate, WorkOrderCreate, WorkOrderOut
 
 router = APIRouter(prefix="/api", tags=["reports"])
 DEMO_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "demo"))
@@ -154,6 +154,35 @@ def update_report_status(report_id: int, update: StatusUpdate, db: Session = Dep
     db.refresh(report)
     return report
 
+
+
+@router.get("/reports/{report_id}/work-orders", response_model=List[WorkOrderOut])
+def list_work_orders(report_id: int, db: Session = Depends(get_db)):
+    if db.get(PotholeReport, report_id) is None:
+        raise HTTPException(status_code=404, detail="Report not found")
+    return db.query(WorkOrder).filter(WorkOrder.report_id == report_id).order_by(WorkOrder.created_at.desc()).all()
+
+
+@router.post("/reports/{report_id}/work-orders", response_model=WorkOrderOut, status_code=201)
+def create_work_order(report_id: int, data: WorkOrderCreate, db: Session = Depends(get_db)):
+    if db.get(PotholeReport, report_id) is None:
+        raise HTTPException(status_code=404, detail="Report not found")
+    if data.priority not in ("low", "normal", "high", "urgent"):
+        raise HTTPException(status_code=400, detail="Invalid priority")
+    order = WorkOrder(report_id=report_id, **data.model_dump())
+    db.add(order); db.commit(); db.refresh(order)
+    return order
+
+
+@router.patch("/work-orders/{work_order_id}/status", response_model=WorkOrderOut)
+def update_work_order_status(work_order_id: int, status: str, db: Session = Depends(get_db)):
+    if status not in ("open", "assigned", "in_progress", "completed", "cancelled"):
+        raise HTTPException(status_code=400, detail="Invalid work order status")
+    order = db.get(WorkOrder, work_order_id)
+    if order is None:
+        raise HTTPException(status_code=404, detail="Work order not found")
+    order.status = status; db.commit(); db.refresh(order)
+    return order
 
 @router.get("/reports/export")
 def export_reports(db: Session = Depends(get_db)):

@@ -38,3 +38,16 @@ class ReportOwner(Base):
     __tablename__ = "report_owners"
     report_id = Column(Integer, ForeignKey("pothole_reports.id"), primary_key=True)
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
+
+
+class WorkOrder(Base):
+    __tablename__ = "work_orders"
+    id = Column(Integer, primary_key=True)
+    report_id = Column(Integer, ForeignKey("pothole_reports.id"), nullable=False, index=True)
+    title = Column(String(200), nullable=False)
+    assigned_team = Column(String(120), nullable=True)
+    priority = Column(String(20), nullable=False, default="normal")
+    scheduled_date = Column(String(20), nullable=True)
+    status = Column(String(30), nullable=False, default="open")
+    notes = Column(Text, nullable=True)
+    created_at = Column(DateTime, nullable=False, default=lambda: datetime.now(timezone.utc))

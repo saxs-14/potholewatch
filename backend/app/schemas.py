@@ -56,3 +56,19 @@ class DashboardSummary(BaseModel):
     avg_confidence: float
     open_reports: int
     fixed_reports: int
+
+
+class WorkOrderCreate(BaseModel):
+    title: str = Field(min_length=3, max_length=200)
+    assigned_team: Optional[str] = Field(default=None, max_length=120)
+    priority: str = Field(default="normal", max_length=20)
+    scheduled_date: Optional[str] = Field(default=None, max_length=20)
+    notes: Optional[str] = Field(default=None, max_length=1000)
+
+class WorkOrderOut(WorkOrderCreate):
+    id: int
+    report_id: int
+    status: str
+    created_at: datetime
+    class Config:
+        from_attributes = True
