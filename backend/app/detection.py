@@ -6,16 +6,18 @@ Pothole detection combines two signals:
    on its own. This is a legitimate, precedented baseline technique
    (pre-dating deep-learning pothole detectors).
 2. A trained MobileNetV2 classifier (none/minor/moderate/severe severity,
-   fine-tuned on ~900 labeled road-damage photos) predicts overall
+   fine-tuned on ~1,200 labeled road-damage photos) predicts overall
    severity directly from the photo, replacing the old count/coverage
    threshold rule for the "severity" label `classify_severity()` remains
    available/tested below as the fallback rule it's based on. Retrained
-   with a ~3x larger dataset (CC0 road-issue photos added to the original
-   297), the model reached 76.0% held-out validation accuracy, up from
-   67.8% - a real improvement, still the weakest of this portfolio's
-   trained models because the "none" (clean road) class still only has 40
-   training images (no larger clean-road source was found). See README
-   "Limitations".
+   with 300 CC0-licensed clean-road photos added to the "none" class
+   (previously only 40 images - the long-standing weak point), the model
+   reached 80.8% held-out validation accuracy, up from 76.0%. Verified
+   against an independent clean-road photo (not from any training source)
+   to confirm the larger "none" class didn't just move the imbalance
+   elsewhere - it still classifies correctly. "minor" (105 images) is now
+   the smallest class and the next place to improve if more graded
+   minor-damage photos become available. See README "Limitations".
 """
 import os
 from typing import Tuple
