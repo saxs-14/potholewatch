@@ -1,3 +1,5 @@
+<p align="center"><img src=".github/assets/banner.svg" width="100%" alt="PotholeWatch banner"/></p>
+
 # PotholeWatch
 
 PotholeWatch is a road-damage reporting system that combines computer vision, evidence capture, GPS coordinates and a review workflow.
